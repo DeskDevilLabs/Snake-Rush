@@ -7,7 +7,7 @@ import os
 
 # Get script directory for leaderboard file
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-LEADERBOARD_FILE = os.path.join(SCRIPT_DIR, "snake_leaderboard.json")
+LEADERBOARD_FILE = os.path.join(SCRIPT_DIR, "snake_rush_leaderboard.json")
 
 pygame.mixer.init()
 
