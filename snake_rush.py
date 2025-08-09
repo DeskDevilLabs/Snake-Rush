@@ -4,27 +4,55 @@ import random
 from datetime import datetime
 import json
 import os
+import platform
 
-# Get script directory for leaderboard file
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-LEADERBOARD_FILE = os.path.join(SCRIPT_DIR, "snake_rush_leaderboard.json")
-
+# Initialize pygame early for sound/mixer
+pygame.init()
 pygame.mixer.init()
 
-# Game BGM
-game_bg_soundpath = os.path.join(SCRIPT_DIR, "snake_rush_bgm.wav")
-game_bg = pygame.mixer.Sound(game_bg_soundpath)
-game_bg.set_volume(0.3)  # Set volume
+# Determine the correct paths for data files
+def get_data_path(filename):
+    # If we're running as a PyInstaller bundle
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    
+    return os.path.join(base_path, filename)
 
-# Game Over Sound
-game_over_soundpath = os.path.join(SCRIPT_DIR, "game_over.wav")
-game_over_sound = pygame.mixer.Sound(game_over_soundpath)
-game_over_sound.set_volume(0.7)  # Set volume
+def get_writable_path(filename):
+    # Get appropriate writable location based on OS
+    if platform.system() == "Windows":
+        appdata = os.getenv('APPDATA')
+        save_dir = os.path.join(appdata, 'SnakeRush')
+    else:  # Linux/Mac
+        home = os.path.expanduser("~")
+        save_dir = os.path.join(home, '.snakerush')
+    
+    os.makedirs(save_dir, exist_ok=True)
+    return os.path.join(save_dir, filename)
 
-# Food capture sound
-food_capture_soundpath = os.path.join(SCRIPT_DIR, "food_capture_sound.wav")
-food_capture_sound = pygame.mixer.Sound(food_capture_soundpath)
-food_capture_sound.set_volume(0.5)
+# Sound files
+try:
+    game_bg = pygame.mixer.Sound(get_data_path("snake_rush_bgm.wav"))
+    game_bg.set_volume(0.3)
+    game_over_sound = pygame.mixer.Sound(get_data_path("game_over.wav"))
+    game_over_sound.set_volume(0.7)
+    food_capture_sound = pygame.mixer.Sound(get_data_path("food_capture_sound.wav"))
+    food_capture_sound.set_volume(0.5)
+except:
+    # Fallback if sound files aren't found
+    class DummySound:
+        def play(self): pass
+        def stop(self): pass
+        def set_volume(self, vol): pass
+    
+    game_bg = DummySound()
+    game_over_sound = DummySound()
+    food_capture_sound = DummySound()
+
+# Leaderboard file path
+LEADERBOARD_FILE = get_writable_path("snake_rush_leaderboard.json")
 
 # Settings Variables
 bgm_muted = False
@@ -35,18 +63,16 @@ fullscreen = False
 FPS = 60
 clock = pygame.time.Clock()
 
-# Initialize Pygame
-pygame.init()
-
 # Calculate grid-aligned screen dimensions
 BLOCK_SIZE = 30
-GRID_WIDTH = pygame.display.Info().current_w // BLOCK_SIZE
-GRID_HEIGHT = pygame.display.Info().current_h // BLOCK_SIZE
+info = pygame.display.Info()
+GRID_WIDTH = info.current_w // BLOCK_SIZE
+GRID_HEIGHT = info.current_h // BLOCK_SIZE
 SCREEN_WIDTH = GRID_WIDTH * BLOCK_SIZE
 SCREEN_HEIGHT = GRID_HEIGHT * BLOCK_SIZE
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption('Snake - Endless Mode')
+pygame.display.set_caption('Snake Rush - Endless Mode')
 
 # Colors
 BLACK = (0, 0, 0)
@@ -66,7 +92,6 @@ ORANGE = (255, 165, 0)
 BASE_FPS = 8
 MAX_FPS = 20
 SPEED_INTERVAL = 5  # Increase speed every 5 points
-clock = pygame.time.Clock()
 
 class Button:
     def __init__(self, x, y, width, height, text, color, hover_color, text_color=WHITE):
@@ -126,25 +151,27 @@ class LeaderBoard:
         self.save_scores()
 
     def load_scores(self):
-        if os.path.exists(LEADERBOARD_FILE):
-            try:
+        try:
+            if os.path.exists(LEADERBOARD_FILE):
                 with open(LEADERBOARD_FILE, 'r') as f:
                     self.scores = json.load(f)
                     # Ensure scores are sorted
                     self.scores.sort(key=lambda x: x['score'], reverse=True)
                     # Keep only top 10
                     self.scores = self.scores[:10]
-            except (json.JSONDecodeError, IOError):
-                # If file is corrupted, start fresh
-                self.scores = []
-        else:
-            # Create file if it doesn't exist
-            with open(LEADERBOARD_FILE, 'w') as f:
-                json.dump([], f)
+            else:
+                # Create file if it doesn't exist
+                self.save_scores()
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error loading leaderboard: {e}")
+            self.scores = []
     
     def save_scores(self):
-        with open(LEADERBOARD_FILE, 'w') as f:
-            json.dump(self.scores, f)
+        try:
+            with open(LEADERBOARD_FILE, 'w') as f:
+                json.dump(self.scores, f)
+        except IOError as e:
+            print(f"Error saving leaderboard: {e}")
     
     def add_score(self, score, length):
         if score > 0:
@@ -315,9 +342,9 @@ class LogoScreen:
     def load_logos(self):
         # Try to load multiple logo images
         logo_paths = [
-            os.path.join(SCRIPT_DIR, "DD Lab1.png"),
-            (os.path.join(SCRIPT_DIR, "logo1.png"), os.path.join(SCRIPT_DIR, "logo2.jpg")),
-            os.path.join(SCRIPT_DIR, "snake_rush.png")
+            get_data_path("DD Lab1.png"),
+            (get_data_path("logo1.png"), get_data_path("logo2.jpg")),
+            get_data_path("snake_rush.png")
         ]
         
         for item in logo_paths:
@@ -354,6 +381,7 @@ class LogoScreen:
                     self.logos.append(logo_pair)
             
             except Exception as e:
+                print(f"Error loading logo: {e}")
                 pass
         
         # If no logos loaded, create text-based ones
@@ -449,19 +477,19 @@ def show_exit_credits():
     # Stop any currently playing sounds
     pygame.mixer.stop()
     
-    # Load outro music (replace with your actual file path)
-    outro_music_path = os.path.join(SCRIPT_DIR, "outro_music.wav")  # or .ogg
+    # Load outro music
+    outro_music_path = get_data_path("outro_music.wav")
     try:
         outro_music = pygame.mixer.Sound(outro_music_path)
-        outro_music.set_volume(0.7)  # Adjust volume as needed
-        outro_music.play(loops=-1)  # Loop indefinitely
+        outro_music.set_volume(0.7)
+        outro_music.play(loops=-1)
     except:
         outro_music = None
     
     # Initialize parameters
     rolling_text_y = SCREEN_HEIGHT  # Start below screen
     rolling_text_speed = 2  # Pixels per frame
-    total_duration = 14000  # 14 seconds total (can adjust as needed)
+    total_duration = 14000  # 14 seconds total
     start_time = pygame.time.get_ticks()
     
     # Define credits content
@@ -570,7 +598,6 @@ class Game:
         self.title_screen = True
         self.show_leaderboard = False
         self.show_options = False
-        
         
         # Pause menu buttons
         button_width = 200
