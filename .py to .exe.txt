@@ -1,0 +1,1 @@
+pyinstaller --onefile --noconsole --icon=snake_rush.ico --add-data "food_capture_sound.wav;." --add-data "snake_rush.png;." --add-data "snake_rush_bgm.wav;." --add-data "snake_rush_leaderboard.json;." --add-data "logo1.png;." --add-data "logo2.jpg;." --add-data "outro_music.wav;." --add-data "game_over.wav;." snake_rush.py

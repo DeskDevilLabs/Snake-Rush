@@ -35,11 +35,11 @@ def get_writable_path(filename):
 # Sound files
 try:
     game_bg = pygame.mixer.Sound(get_data_path("snake_rush_bgm.wav"))
-    game_bg.set_volume(0.3)
+    game_bg.set_volume(0.6)
     game_over_sound = pygame.mixer.Sound(get_data_path("game_over.wav"))
-    game_over_sound.set_volume(0.7)
+    game_over_sound.set_volume(0.9)
     food_capture_sound = pygame.mixer.Sound(get_data_path("food_capture_sound.wav"))
-    food_capture_sound.set_volume(0.5)
+    food_capture_sound.set_volume(0.7)
 except:
     # Fallback if sound files aren't found
     class DummySound:
@@ -335,9 +335,6 @@ class LogoScreen:
         self.skip_keys = {
             pygame.K_TAB, pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE
         }
-        # Add all alphabet and number keys
-        self.skip_keys.update(range(pygame.K_a, pygame.K_z + 1))  # a-z
-        self.skip_keys.update(range(pygame.K_0, pygame.K_9 + 1))  # 0-9
 
     def load_logos(self):
         # Try to load multiple logo images
@@ -525,9 +522,6 @@ def show_exit_credits():
     skip_keys = {
         pygame.K_TAB, pygame.K_SPACE, pygame.K_RETURN, pygame.K_ESCAPE
     }
-    # Add all alphabet and number keys
-    skip_keys.update(range(pygame.K_a, pygame.K_z + 1))  # a-z
-    skip_keys.update(range(pygame.K_0, pygame.K_9 + 1))  # 0-9
     
     # Main loop
     running = True
@@ -1093,10 +1087,6 @@ class Game:
             game_over_text = big_font.render('GAME OVER', True, RED)
             score_text = small_font.render(f'Final Score: {self.snake.score}', True, WHITE)
             length_text = small_font.render(f'Final Length: {self.snake.length}', True, WHITE)
-            
-            if self.leaderboard.is_high_score(self.snake.score) and self.snake.score > 0:
-                new_record_text = small_font.render('NEW HIGH SCORE!', True, YELLOW)
-                screen.blit(new_record_text, new_record_text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 80)))
             
             restart_text = small_font.render('Press R to Restart or Click Here', True, WHITE)
             restart_rect = restart_text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 70))
